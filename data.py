@@ -61,19 +61,19 @@ class Data:
             self.x = h5f["x"][:]
             self.y = h5f["y"][:]
         else:
-            acapellas = []
-            instrumentals = []
-            for dirPath, dirNames, fileNames in os.walk(self.inPath):
-                for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
-                    targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
-                    tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
-                    if fileIsAcapella(fileName):
-                        audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
-                        spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
-                        targetPathMap.append(spectrogram)
-                console.info("Created spectrogram for", dirPath)
+            # acapellas = []
+            # instrumentals = []
+            # for dirPath, dirNames, fileNames in os.walk(self.inPath):
+            #     for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
+            #         targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
+            #         tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
+            #         if fileIsAcapella(fileName):
+            #             audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
+            #             spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
+            #             targetPathMap.append(spectrogram)
+            #     console.info("Created spectrogram for", dirPath)
 
-            
+
             with open('acapellas.pkl', 'rb') as f:
                 acapellas = pickle.load(f)
 
