@@ -61,25 +61,25 @@ class Data:
             self.x = h5f["x"][:]
             self.y = h5f["y"][:]
         else:
-            acapellas = []
-            instrumentals = []
-            for dirPath, dirNames, fileNames in os.walk(self.inPath):
-                for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
-                    targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
-                    tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
-                    audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
-                    spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
-                    targetPathMap.append(spectrogram)
-                console.info("Created spectrogram for", dirPath)
+            # acapellas = []
+            # instrumentals = []
+            # for dirPath, dirNames, fileNames in os.walk(self.inPath):
+            #     for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
+            #         targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
+            #         tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
+            #         audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
+            #         spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
+            #         targetPathMap.append(spectrogram)
+            #     console.info("Created spectrogram for", dirPath)
             with open('acapellas.pkl', 'wb') as f:
-                pickle.dump(acapellas, f)
+                acapellas = pickle.load(f)
 
             with open('instrumentals.pkl', 'wb') as f:
-                pickle.dump(acapellas, f)
+                instrumentals = pickle.load(f)
             # Merge mashups
             count = 0
-            for acapella in tqdm(acapellas):
-                for instrumental in instrumentals:
+            for acapella in tqdm(acapellas[:20]):
+                for instrumental in instrumentals[:20]:
                     # Pad if smaller
                     if (instrumental.shape[1] < acapella.shape[1]):
                         newInstrumental = np.zeros(acapella.shape)
