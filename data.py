@@ -55,7 +55,7 @@ class Data:
     def valid(self):
         return (self.x[int(len(self.x) * self.trainingSplit):], self.y[int(len(self.y) * self.trainingSplit):])
     def load(self, saveDataAsH5=False):
-        h5Path = os.path.join(self.inPath, "data.h5")
+        h5Path = "data.h5"
         if os.path.isfile(h5Path):
             h5f = h5py.File(h5Path, "r")
             self.x = h5f["x"][:]
