@@ -11,6 +11,7 @@ import sys
 import os
 import numpy as np
 import h5py
+import pickle
 
 import console
 import conversion
@@ -69,7 +70,12 @@ class Data:
                     audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
                     spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
                     targetPathMap.append(spectrogram)
-                    console.info(tag, "Created spectrogram for", fileName, "with shape", spectrogram.shape)
+                console.info("Created spectrogram for", dirPath)
+            with open('acapellas.pkl', 'wb') as f:
+                pickle.dump(acapellas, f)
+
+            with open('instrumentals.pkl', 'wb') as f:
+                pickle.dump(acapellas, f)
             # Merge mashups
             count = 0
             for acapella in tqdm(acapellas):
