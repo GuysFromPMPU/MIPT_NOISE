@@ -61,54 +61,61 @@ class Data:
             self.x = h5f["x"][:]
             self.y = h5f["y"][:]
         else:
-            # acapellas = []
-            # instrumentals = []
-            # for dirPath, dirNames, fileNames in os.walk(self.inPath):
-            #     for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
-            #         targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
-            #         tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
-            #         audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
-            #         spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
-            #         targetPathMap.append(spectrogram)
-            #     console.info("Created spectrogram for", dirPath)
-            with open('acapellas.pkl', 'rb') as f:
-                acapellas = pickle.load(f)
+            acapellas = []
+            instrumentals = []
+            for dirPath, dirNames, fileNames in os.walk(self.inPath):
+                for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
+                    targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
+                    tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
+                    if fileIsAcapella(fileName):
+                        audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
+                        spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
+                        targetPathMap.append(spectrogram)
+                if len(acapellas) > 30:
+                    break
+                console.info("Created spectrogram for", dirPath)
 
-            with open('instrumentals.pkl', 'rb') as f:
-                instrumentals = pickle.load(f)
-            # Merge mashups
-            count = 0
-            for acapella in tqdm(acapellas[:20]):
-                for instrumental in instrumentals[:20]:
-                    # Pad if smaller
-                    if (instrumental.shape[1] < acapella.shape[1]):
-                        newInstrumental = np.zeros(acapella.shape)
-                        newInstrumental[:instrumental.shape[0], :instrumental.shape[1]] = instrumental
-                        instrumental = newInstrumental
-                    elif (acapella.shape[1] < instrumental.shape[1]):
-                        newAcapella = np.zeros(instrumental.shape)
-                        newAcapella[:acapella.shape[0], :acapella.shape[1]] = acapella
-                        acapella = newAcapella
-                    # simulate a limiter/low mixing (loses info, but that's the point)
-                    # I've tested this against making the same mashups in Logic and it's pretty close
-                    mashup = np.maximum(acapella, instrumental)
-                    # chop into slices so everything's the same size in a batch
-                    dim = SLICE_SIZE
-                    mashupSlices = chop(mashup, dim)
-                    acapellaSlices = chop(acapella, dim)
-                    count += 1
-                    self.x.extend(mashupSlices)
-                    self.y.extend(acapellaSlices)
-            console.info("Created", count, "mashups with", len(self.x), "total slices so far")
-            # Add a "channels" channel to please the network
-            self.x = np.array(self.x)[:, :, :, np.newaxis]
-            self.y = np.array(self.y)[:, :, :, np.newaxis]
-            # Save to file if asked
-            if saveDataAsH5:
-                h5f = h5py.File(h5Path, "w")
-                h5f.create_dataset("x", data=self.x)
-                h5f.create_dataset("y", data=self.y)
-                h5f.close()
+            with open('acapellas.pkl', 'wb') as f:
+                acapellas = pickle.dump(acapellas, f)
+            #
+            # with open('acapellas.pkl', 'rb') as f:
+            #     acapellas = pickle.load(f)
+            #
+            # with open('instrumentals.pkl', 'rb') as f:
+            #     instrumentals = pickle.load(f)
+            # # Merge mashups
+            # count = 0
+            # for acapella in tqdm(acapellas[:20]):
+            #     for instrumental in instrumentals[:20]:
+            #         # Pad if smaller
+            #         if (instrumental.shape[1] < acapella.shape[1]):
+            #             newInstrumental = np.zeros(acapella.shape)
+            #             newInstrumental[:instrumental.shape[0], :instrumental.shape[1]] = instrumental
+            #             instrumental = newInstrumental
+            #         elif (acapella.shape[1] < instrumental.shape[1]):
+            #             newAcapella = np.zeros(instrumental.shape)
+            #             newAcapella[:acapella.shape[0], :acapella.shape[1]] = acapella
+            #             acapella = newAcapella
+            #         # simulate a limiter/low mixing (loses info, but that's the point)
+            #         # I've tested this against making the same mashups in Logic and it's pretty close
+            #         mashup = np.maximum(acapella, instrumental)
+            #         # chop into slices so everything's the same size in a batch
+            #         dim = SLICE_SIZE
+            #         mashupSlices = chop(mashup, dim)
+            #         acapellaSlices = chop(acapella, dim)
+            #         count += 1
+            #         self.x.extend(mashupSlices)
+            #         self.y.extend(acapellaSlices)
+            # console.info("Created", count, "mashups with", len(self.x), "total slices so far")
+            # # Add a "channels" channel to please the network
+            # self.x = np.array(self.x)[:, :, :, np.newaxis]
+            # self.y = np.array(self.y)[:, :, :, np.newaxis]
+            # # Save to file if asked
+            # if saveDataAsH5:
+            #     h5f = h5py.File(h5Path, "w")
+            #     h5f.create_dataset("x", data=self.x)
+            #     h5f.create_dataset("y", data=self.y)
+            #     h5f.close()
 
 if __name__ == "__main__":
     # Simple testing code to use while developing
