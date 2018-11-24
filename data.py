@@ -71,10 +71,10 @@ class Data:
             #         spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
             #         targetPathMap.append(spectrogram)
             #     console.info("Created spectrogram for", dirPath)
-            with open('acapellas.pkl', 'wb') as f:
+            with open('acapellas.pkl', 'rb') as f:
                 acapellas = pickle.load(f)
 
-            with open('instrumentals.pkl', 'wb') as f:
+            with open('instrumentals.pkl', 'rb') as f:
                 instrumentals = pickle.load(f)
             # Merge mashups
             count = 0
