@@ -14,6 +14,7 @@ import h5py
 
 import console
 import conversion
+from tqdm import tqdm
 
 # Modify these functions if your data is in a different format
 def keyOfFile(fileName):
@@ -24,7 +25,7 @@ def keyOfFile(fileName):
     return None
 
 def fileIsAcapella(fileName):
-    return "acapella" in fileName.lower()
+    return "1.wav" in fileName.lower()
 
 
 NUMBER_OF_KEYS = 12 # number of keys to iterate over
@@ -59,51 +60,40 @@ class Data:
             self.x = h5f["x"][:]
             self.y = h5f["y"][:]
         else:
-            acapellas = {}
-            instrumentals = {}
-            # Hash bins for each camelot key so we can merge
-            # in the future, this should be a generator w/ yields in order to eat less memory
-            for i in range(NUMBER_OF_KEYS):
-                key = i + 1
-                acapellas[key] = []
-                instrumentals[key] = []
+            acapellas = []
+            instrumentals = []
             for dirPath, dirNames, fileNames in os.walk(self.inPath):
                 for fileName in filter(lambda f : (f.endswith(".mp3") or f.endswith(".wav")) and not f.startswith("."), fileNames):
-                    key = keyOfFile(fileName)
-                    if key:
-                        targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
-                        tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
-                        audio, sampleRate = conversion.loadAudioFile(os.path.join(self.inPath, fileName))
-                        spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
-                        targetPathMap[key].append(spectrogram)
-                        console.info(tag, "Created spectrogram for", fileName, "in key", key, "with shape", spectrogram.shape)
+                    targetPathMap = acapellas if fileIsAcapella(fileName) else instrumentals
+                    tag = "[Acapella]" if fileIsAcapella(fileName) else "[Instrumental]"
+                    audio, sampleRate = conversion.loadAudioFile(os.path.join(dirPath, fileName))
+                    spectrogram, phase = conversion.audioFileToSpectrogram(audio, self.fftWindowSize)
+                    targetPathMap.append(spectrogram)
+                    console.info(tag, "Created spectrogram for", fileName, "with shape", spectrogram.shape)
             # Merge mashups
-            for k in range(NUMBER_OF_KEYS):
-                acapellasInKey = acapellas[k + 1]
-                instrumentalsInKey = instrumentals[k + 1]
-                count = 0
-                for acapella in acapellasInKey:
-                    for instrumental in instrumentalsInKey:
-                        # Pad if smaller
-                        if (instrumental.shape[1] < acapella.shape[1]):
-                            newInstrumental = np.zeros(acapella.shape)
-                            newInstrumental[:instrumental.shape[0], :instrumental.shape[1]] = instrumental
-                            instrumental = newInstrumental
-                        elif (acapella.shape[1] < instrumental.shape[1]):
-                            newAcapella = np.zeros(instrumental.shape)
-                            newAcapella[:acapella.shape[0], :acapella.shape[1]] = acapella
-                            acapella = newAcapella
-                        # simulate a limiter/low mixing (loses info, but that's the point)
-                        # I've tested this against making the same mashups in Logic and it's pretty close
-                        mashup = np.maximum(acapella, instrumental)
-                        # chop into slices so everything's the same size in a batch
-                        dim = SLICE_SIZE
-                        mashupSlices = chop(mashup, dim)
-                        acapellaSlices = chop(acapella, dim)
-                        count += 1
-                        self.x.extend(mashupSlices)
-                        self.y.extend(acapellaSlices)
-                console.info("Created", count, "mashups for key", k, "with", len(self.x), "total slices so far")
+            count = 0
+            for acapella in tqdm(acapellas):
+                for instrumental in instrumentals:
+                    # Pad if smaller
+                    if (instrumental.shape[1] < acapella.shape[1]):
+                        newInstrumental = np.zeros(acapella.shape)
+                        newInstrumental[:instrumental.shape[0], :instrumental.shape[1]] = instrumental
+                        instrumental = newInstrumental
+                    elif (acapella.shape[1] < instrumental.shape[1]):
+                        newAcapella = np.zeros(instrumental.shape)
+                        newAcapella[:acapella.shape[0], :acapella.shape[1]] = acapella
+                        acapella = newAcapella
+                    # simulate a limiter/low mixing (loses info, but that's the point)
+                    # I've tested this against making the same mashups in Logic and it's pretty close
+                    mashup = np.maximum(acapella, instrumental)
+                    # chop into slices so everything's the same size in a batch
+                    dim = SLICE_SIZE
+                    mashupSlices = chop(mashup, dim)
+                    acapellaSlices = chop(acapella, dim)
+                    count += 1
+                    self.x.extend(mashupSlices)
+                    self.y.extend(acapellaSlices)
+            console.info("Created", count, "mashups with", len(self.x), "total slices so far")
             # Add a "channels" channel to please the network
             self.x = np.array(self.x)[:, :, :, np.newaxis]
             self.y = np.array(self.y)[:, :, :, np.newaxis]
@@ -117,9 +107,9 @@ class Data:
 if __name__ == "__main__":
     # Simple testing code to use while developing
     console.h1("Loading Data")
-    d = Data(sys.argv[1], 1536)
-    console.h1("Writing Sample Data")
-    conversion.saveSpectrogram(d.x[0], "x_sample_0.png")
-    conversion.saveSpectrogram(d.y[0], "y_sample_0.png")
-    audio = conversion.spectrogramToAudioFile(d.x[0], 1536)
-    conversion.saveAudioFile(audio, "x_sample.wav", 22050)
+    d = Data(sys.argv[1])
+    # console.h1("Writing Sample Data")
+    # conversion.saveSpectrogram(d.x[0], "x_sample_0.png")
+    # conversion.saveSpectrogram(d.y[0], "y_sample_0.png")
+    # audio = conversion.spectrogramToAudioFile(d.x[0], 1536)
+    # conversion.saveAudioFile(audio, "x_sample.wav", 22050)
